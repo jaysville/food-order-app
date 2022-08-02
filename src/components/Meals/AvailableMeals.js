@@ -1,35 +1,54 @@
 import Card from "../UI/Card";
 import classes from "./AvailableMeals.module.css";
 import MealItem from "./MealItem";
-const DUMMY_MEALS = [
-  {
-    id: "m1",
-    name: "Sushi",
-    description: "Finest fish and veggies",
-    price: 22.99,
-  },
-  {
-    id: "m2",
-    name: "Schnitzel",
-    description: "A german specialty!",
-    price: 16.5,
-  },
-  {
-    id: "m3",
-    name: "Barbecue Burger",
-    description: "American, raw, meaty",
-    price: 12.99,
-  },
-  {
-    id: "m4",
-    name: "Green Bowl",
-    description: "Healthy...and green...",
-    price: 18.99,
-  },
-];
+import axios from "axios";
+import { useEffect, useState } from "react";
 
 const AvailableMeals = () => {
-  const mealsList = DUMMY_MEALS.map(({ id, name, description, price }) => {
+  const [meals, setMeals] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [httpError, setHttpError] = useState(null);
+
+  const getMeals = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        "https://food-order-app-d915a-default-rtdb.firebaseio.com/meals.json"
+      );
+      if (!response.statusText) {
+        throw new Error("Something went wrong");
+      }
+      const loadedMeals = [];
+
+      for (const key in response.data) {
+        loadedMeals.push({
+          id: key,
+          name: response.data[key].name,
+          price: response.data[key].price,
+          description: response.data[key].description,
+        });
+      }
+      setMeals(loadedMeals);
+    } catch (err) {
+      setHttpError(err.message);
+      console.log(err);
+    }
+
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    getMeals();
+  }, []);
+
+  if (httpError) {
+    return (
+      <section className={classes.mealsError}>
+        <p>{httpError}</p>
+      </section>
+    );
+  }
+  const mealsList = meals.map(({ id, name, description, price }) => {
     return (
       <MealItem
         key={id}
@@ -41,11 +60,17 @@ const AvailableMeals = () => {
     );
   });
   return (
-    <section className={classes.meals}>
-      <Card>
-        <ul>{mealsList}</ul>
-      </Card>
-    </section>
+    <>
+      {isLoading ? (
+        <p className={classes.loading}>Loading......</p>
+      ) : (
+        <section className={classes.meals}>
+          <Card>
+            <ul>{mealsList}</ul>
+          </Card>
+        </section>
+      )}
+    </>
   );
 };
 export default AvailableMeals;
